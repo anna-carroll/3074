@@ -7,7 +7,7 @@ import {BatchInvoker} from "../src/BatchInvoker.sol";
 contract Callee {
     error UnexpectedSender(address expected, address actual);
 
-    function expectSender(address expected) public view {
+    function expectSender(address expected) public payable {
         if (msg.sender != expected) revert UnexpectedSender(expected, msg.sender);
     }
 }
@@ -28,13 +28,13 @@ contract BatchInvokerTest is Test {
         vm.label(authority, "authority");
     }
 
-    function constructAndSignBatch(uint256 nonce) internal returns (uint8 v, bytes32 r, bytes32 s) {
+    function constructAndSignBatch(uint256 nonce, uint256 value) internal returns (uint8 v, bytes32 r, bytes32 s) {
         batch.nonce = nonce;
         batch.calls.push(
             BatchInvoker.Call({
                 to: address(callee),
                 data: abi.encodeWithSelector(Callee.expectSender.selector, authority),
-                value: 0,
+                value: value,
                 gasLimit: 10_000
             })
         );
@@ -47,7 +47,7 @@ contract BatchInvokerTest is Test {
     // because right now, the Invoker is calling the Callee with CALL (so msg.sender = Invoker)
     // the test will pass once Invoker successfully calls the Callee with AUTHCALL (so msg.sender = authority)
     function test_authCall() public {
-        (uint8 v, bytes32 r, bytes32 s) = constructAndSignBatch(0);
+        (uint8 v, bytes32 r, bytes32 s) = constructAndSignBatch(0, 0);
         // this will call Callee.expectSender(authority)
         invoker.execute(batch, v, r, s);
     }
@@ -55,11 +55,30 @@ contract BatchInvokerTest is Test {
     // invalid nonce fails
     function test_invalidNonce() public {
         // 1 is invalid starting nonce
-        (uint8 v, bytes32 r, bytes32 s) = constructAndSignBatch(1);
+        (uint8 v, bytes32 r, bytes32 s) = constructAndSignBatch(1, 0);
         vm.expectRevert(abi.encodeWithSelector(BatchInvoker.InvalidNonce.selector, authority, 0, 1));
         invoker.execute(batch, v, r, s);
     }
 
+    function test_authCallWithValue() public {
+        (uint8 v, bytes32 r, bytes32 s) = constructAndSignBatch(0, 1 ether);
+        // this will call Callee.expectSender(authority)
+        invoker.execute{value: 1 ether}(batch, v, r, s);
+    }
+
+    // fails if too little value to pass to sub-call
+    function test_tooLittleValue() public {
+        (uint8 v, bytes32 r, bytes32 s) = constructAndSignBatch(0, 1 ether);
+        vm.expectRevert();
+        invoker.execute{value: 0.5 ether}(batch, v, r, s);
+    }
+
+    // fails if too much value to pass to sub-call
+    function test_tooMuchValue() public {
+        (uint8 v, bytes32 r, bytes32 s) = constructAndSignBatch(0, 1 ether);
+        vm.expectRevert(abi.encodeWithSelector(BatchInvoker.ExtraValue.selector));
+        invoker.execute{value: 2 ether}(batch, v, r, s);
+    }
+
     // TODO: test that auth returns authority address
-    // TODO: test that incorrect value fails
 }

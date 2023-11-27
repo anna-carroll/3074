@@ -69,16 +69,12 @@ contract BatchInvoker is Auth {
         // validate the nonce & increment
         uint256 expectedNonce = nextNonce[authority]++;
         if (expectedNonce != batch.nonce) revert InvalidNonce(authority, expectedNonce, batch.nonce);
-        // keep track of the total value used by each sub-call
-        uint256 totalValue;
         // AUTHCALL each call in the batch
         for (uint256 i; i < batch.calls.length; i++) {
             exec(batch.calls[i]);
-            totalValue += batch.calls[i].value;
         }
-        // ensure the exact correct amount of value was passed to the transaction (no extra left in BatchInvoker contract)
-        // NOTE: another way to do this would be to ensure that address(this).balance was zero..
-        if (totalValue != msg.value) revert ExtraValue();
+        // ensure that all value passed to the transaction was passed on to sub-calls (no leftover value in BatchInvoker contract)
+        if (address(this).balance != 0) revert ExtraValue();
     }
 
     /// @notice execute a single Call. revert if it fails.
