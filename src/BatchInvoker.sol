@@ -34,7 +34,6 @@ contract BatchInvoker is Auth {
     }
 
     /// @notice authority => next valid nonce
-    /// @dev valid nonce starts at 1
     mapping(address => uint256) public nextNonce;
 
     /// @notice thrown when a Batch is executed with an invalid nonce
@@ -68,7 +67,7 @@ contract BatchInvoker is Auth {
         // AUTH this contract to execute the Batch on behalf of the authority
         address authority = auth(getCommit(batch), v, r, s);
         // validate the nonce & increment
-        uint256 expectedNonce = ++nextNonce[authority];
+        uint256 expectedNonce = nextNonce[authority]++;
         if (expectedNonce != batch.nonce) revert InvalidNonce(authority, expectedNonce, batch.nonce);
         // keep track of the total value used by each sub-call
         uint256 totalValue;

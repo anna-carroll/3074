@@ -47,20 +47,16 @@ contract BatchInvokerTest is Test {
     // because right now, the Invoker is calling the Callee with CALL (so msg.sender = Invoker)
     // the test will pass once Invoker successfully calls the Callee with AUTHCALL (so msg.sender = authority)
     function test_authCall() public {
-        (uint8 v, bytes32 r, bytes32 s) = constructAndSignBatch(1);
+        (uint8 v, bytes32 r, bytes32 s) = constructAndSignBatch(0);
         // this will call Callee.expectSender(authority)
         invoker.execute(batch, v, r, s);
     }
 
     // invalid nonce fails
     function test_invalidNonce() public {
-        // 0 is invalid starting nonce
-        (uint8 v, bytes32 r, bytes32 s) = constructAndSignBatch(0);
-        vm.expectRevert(abi.encodeWithSelector(BatchInvoker.InvalidNonce.selector, authority, 1, 0));
-        invoker.execute(batch, v, r, s);
-        // 2 is invalid starting nonce
-        (v, r, s) = constructAndSignBatch(2);
-        vm.expectRevert(abi.encodeWithSelector(BatchInvoker.InvalidNonce.selector, authority, 1, 2));
+        // 1 is invalid starting nonce
+        (uint8 v, bytes32 r, bytes32 s) = constructAndSignBatch(1);
+        vm.expectRevert(abi.encodeWithSelector(BatchInvoker.InvalidNonce.selector, authority, 0, 1));
         invoker.execute(batch, v, r, s);
     }
 
