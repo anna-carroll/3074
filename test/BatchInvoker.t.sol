@@ -28,12 +28,15 @@ contract BatchInvokerTest is Test {
         vm.label(authority, "authority");
     }
 
+    // TODO: update test so that expectedSender is authority, NOT address(invoker), once Auth contract is fully implemented
+    // for now, the Invoker is calling the Callee with CALL (so msg.sender = Invoker)
+    // later, the Invoker SHOULD calls the Callee with AUTHCALL (so msg.sender = authority)
     function constructAndSignBatch(uint256 nonce, uint256 value) internal returns (uint8 v, bytes32 r, bytes32 s) {
         batch.nonce = nonce;
         batch.calls.push(
             BatchInvoker.Call({
                 to: address(callee),
-                data: abi.encodeWithSelector(Callee.expectSender.selector, authority),
+                data: abi.encodeWithSelector(Callee.expectSender.selector, address(invoker)),
                 value: value,
                 gasLimit: 10_000
             })
@@ -43,9 +46,6 @@ contract BatchInvokerTest is Test {
         (v, r, s) = vm.sign(authorityKey, digest);
     }
 
-    // NOTE: right now, this test will fail; Callee will emit UnexpectedSender(authority, address(invoker))
-    // because right now, the Invoker is calling the Callee with CALL (so msg.sender = Invoker)
-    // the test will pass once Invoker successfully calls the Callee with AUTHCALL (so msg.sender = authority)
     function test_authCall() public {
         (uint8 v, bytes32 r, bytes32 s) = constructAndSignBatch(0, 0);
         // this will call Callee.expectSender(authority)
