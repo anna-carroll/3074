@@ -84,18 +84,6 @@ contract BatchInvoker is Auth {
 
     /// @notice execute a single Call. revert if it fails.
     function exec(Call memory call) internal {
-        address to = call.to;
-        bytes memory data = call.data;
-        uint256 value = call.value;
-        uint256 gasLimit = call.gasLimit;
-        assembly {
-            // TODO: once available in Solidity, replace `call` with `authcall`
-            let success := call(gasLimit, to, value, add(data, 0x20), mload(data), 0, 0)
-            if eq(success, 0) {
-                let errorLength := returndatasize()
-                returndatacopy(0, 0, errorLength)
-                revert(0, errorLength)
-            }
-        }
+        authCall(call.to, call.data, call.value, call.gasLimit);
     }
 }

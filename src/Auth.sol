@@ -20,6 +20,7 @@ abstract contract Auth {
         digest = keccak256(abi.encodePacked(MAGIC, bytes32(block.chainid), paddedInvokerAddress, commit));
     }
 
+    /// @notice call AUTH opcode with a given a commitment + signature
     /// @param commit - any 32-byte value used to commit to transaction validity conditions
     /// @dev (v, r, s) are interpreted as an ECDSA signature on the secp256k1 curve over getDigest(commit)
     /// @return authority - the signer of the digest recovered from the signature
@@ -28,5 +29,19 @@ abstract contract Auth {
         // derive authority from the signature + digest
         authority = ecrecover(digest, v, r, s);
         // TODO: once available in Solidity, call AUTH - pass in (authority, pointer to signature in memory)
+    }
+
+    /// @notice call AUTHCALL opcode with given call instructions
+    /// @dev MUST call AUTH before attempting to AUTHCALL
+    function authCall(address to, bytes memory data, uint256 value, uint256 gasLimit) internal {
+        assembly {
+            // TODO: once available in Solidity, replace `call` with `authcall`
+            let success := call(gasLimit, to, value, add(data, 0x20), mload(data), 0, 0)
+            if eq(success, 0) {
+                let errorLength := returndatasize()
+                returndatacopy(0, 0, errorLength)
+                revert(0, errorLength)
+            }
+        }
     }
 }
