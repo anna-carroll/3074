@@ -3,7 +3,7 @@ pragma solidity ^0.8.13;
 
 abstract contract Auth {
     /// @notice magic byte to disambiguate EIP-3074 signature payloads
-    uint8 constant MAGIC = 0x03;
+    uint8 constant MAGIC = 0x04;
 
     /// @notice produce a digest for the authorizer to sign
     /// @param commit - any 32-byte value used to commit to transaction validity conditions
